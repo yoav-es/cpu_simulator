@@ -12,6 +12,9 @@ Showing how data moves between components
 """
 import sys
 import logging 
+import math
+from typing import Optional
+
 
 MEMORY_SIZE = 2**20  # 1 MB memory size
 
@@ -311,38 +314,72 @@ class memory_bus:
         self.storage[address] = masked_value
         logger.info(f"Stored word at address {address}: {value}")
 
+class Block:
+    def __init__(self, tag: int = 0, data: Optional[list[int]] = None) -> None:
+        self.tag = tag
+        self.valid = False
+        self.dirty = False
+        self.data = data if data is not None else [0] * 8  # 8-word block
 
 
 # class cache
 class cache:
     def __init__(self) -> None:
         logger.info("Initializing Cache")
-        self.blocks = {}
-        self.cache_line = {
-            index: {
-                "tag": ...,
-                "valid": ...,
-                "dirty": ...,
-                "data": [...],
-            }
-}
+        self.word_size = 4  # 4 bytes per word
+        self.cache_size = 1024  # 1 KB cache size
+        self.block_size = 8  # 8 words per block
+        self.cache_lines = self.cache_size // (self.block_size * self.word_size)
+        self.address_size = int(math.log2(MEMORY_SIZE))
+        self.blocks = [Block() for _ in range(self.cache_lines)]        
+        logger.info(f"Cache initialized with {self.cache_lines} lines")
+        logger.info(f"Cache parameters - Word Size: {self.word_size} bytes, Cache Size: {self.cache_size} bytes, Block Size: {self.block_size} words")
 
-        
+    def decode_address(self, address: int) -> tuple[int, int, int]:
+        offset = address & 0b111
+        index = (address >> 3) & 0b11111
+        tag = address >> 8
+        return tag, index, offset
 
-    def hit_or_miss(self, address: int) -> bool:
-        logger.info(f"Checking cache for address {address}")
-        return address in self.blocks
-    
-    def read(self, address: int, memory: memory_bus) -> int:
-        pass
+    def hit_or_miss(self, block: Block, tag: int) -> bool:
+        return block.valid and block.tag == tag
 
-    def write(self, address: int, value: int, memory: memory_bus) -> None:
-        pass 
+    def read(self, address: int, memory: memory_bus) -> Optional[list[int]]:
+        tag, index, offset = self.decode_address(address)
+        block = self.blocks[index]
+        if self.hit_or_miss(block, tag):
+            logger.info(f"Reading from cache for address {address}")
+            return block.data[offset:offset+1]
+        logger.info(f"Cache miss on read for address {address}")
+        # implement block fetch from memory
+        self.block_replacement_policy()
+        return None
+
+    # def write(self, address: int, value: int, memory: memory_bus) -> None:
+    #     tag, index, offset = self.decode_address(address)
+    #     block = self.blocks[index]
+
+    #     if self.hit_or_miss(block, tag):
+    #         logger.info(f"Writing {value} to cache at address {address}")
+    #         block.data[offset] = value
+    #         block.dirty = True
+    #         return
+
+    #     logger.info(f"Cache miss on write at address {address}")
+    #     self.write_back_if_dirty(block, index, memory)
+
+    #     new_block = self.fetch_block_from_memory(tag, index, memory)
+    #     new_block.data[offset] = value
+    #     new_block.dirty = True
+    #     self.blocks[index] = new_block
+
+
 
     def block_replacement_policy(self):
         pass
 
     
+
 
 
 
