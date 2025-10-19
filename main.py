@@ -13,6 +13,8 @@ Showing how data moves between components
 import sys
 import logging 
 
+MEMORY_SIZE = 2**20  # 1 MB memory size
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(name)s - %(message)s'
@@ -28,7 +30,6 @@ class cpu:
         self.load_instructions = []
         self.memory = memory_bus()
         self.halted = False
-        # self.memory = memory() - not implemented yet
         # self.cache = cache() - not implemented yet
 
         self.instruction_set = {
@@ -53,7 +54,7 @@ class cpu:
             return [line.strip() for line in file.readlines()]
     
     @staticmethod
-    def valid_registers(*indices: int, allow_r0: bool = False) -> bool:
+    def _valid_registers(*indices: int, allow_r0: bool = False) -> bool:
         return all(isinstance(idx, int) and 0 <= idx < 32 for idx in indices) and (allow_r0 or 0 not in indices)
 
     def load_instruction(self, instructions_file):
@@ -127,7 +128,7 @@ class cpu:
             value = self.registers[rt_idx]
             instr_name = "ADD"
 
-        if not self.valid_registers(src_idx, dest_idx):
+        if not self._valid_registers(src_idx, dest_idx):
             raise Exception(f"Invalid register index: src={src_idx}, dest={dest_idx}")
 
         if immediate and not (-(2**31) <= value <= (2**31 - 1)):
@@ -157,7 +158,7 @@ class cpu:
             value = self.registers[rt_idx]
             instr_name = "SUB"
 
-        if not self.valid_registers(src_idx, dest_idx):
+        if not self._valid_registers(src_idx, dest_idx):
             raise Exception(f"Invalid register index: src={src_idx}, dest={dest_idx}")
 
         if immediate and not (-(2**31) <= value <= (2**31 - 1)):
@@ -176,7 +177,7 @@ class cpu:
         dest_idx = int(dest[1:])
         src_idx = int(src[1:])
         rt_idx = int(rt[1:])
-        if not self.valid_registers(src_idx, rt_idx, dest_idx):
+        if not self._valid_registers(src_idx, rt_idx, dest_idx):
             raise Exception(f"Invalid register index: src={src_idx}, rt={rt_idx}, dest={dest_idx}")
         self.registers[dest_idx] = 1 if self.registers[src_idx] < self.registers[rt_idx] else 0
         logger.info(f"SLT executed: R{dest_idx} = (R{src_idx} < R{rt_idx}) → {self.registers[dest_idx]}")
@@ -187,7 +188,7 @@ class cpu:
         rs_idx = int(rs[1:])
         rt_idx = int(rt[1:])
         offset = int(offset)
-        if not self.valid_registers(rs_idx, rt_idx):
+        if not self._valid_registers(rs_idx, rt_idx):
             raise Exception(f"Invalid register index: src={rs_idx}, rt={rt_idx}")
         if offset % 4 != 0 or not (-32768 <= offset <= 32767):
             raise Exception(f"Invalid branch offset: {offset}")
@@ -215,7 +216,7 @@ class cpu:
         offset_str, rs_str = offset_expr.replace(')', '').split('(')
         offset = int(offset_str)
         rs_idx = int(rs_str[1:])
-        if not self.valid_registers(rs_idx, rt_idx, offset):
+        if not self._valid_registers(rs_idx, rt_idx, offset):
             raise Exception(f"Invalid register index: src={rs_idx}, rt={rt_idx}")
         if offset % 4 != 0 or not (-32768 <= offset <= 32767):
             raise Exception(f"Invalid store offset: {offset}")
@@ -227,7 +228,7 @@ class cpu:
         offset_str, rs_str = offset_expr.replace(')', '').split('(')
         offset = int(offset_str)
         rs_idx = int(rs_str[1:])
-        if not self.valid_registers(rs_idx, rt_idx):
+        if not self._valid_registers(rs_idx, rt_idx):
             raise Exception(f"Invalid register index: src={rs_idx}, rt={rt_idx}")
         if offset % 4 != 0 or not (-32768 <= offset <= 32767):
             raise Exception(f"Invalid store offset: {offset}")
@@ -276,14 +277,38 @@ class cpu:
 class memory_bus:
     def __init__(self) -> None:
         logger.info("Initializing Memory")
-        self.storage = {}
+        self.memory_size = MEMORY_SIZE  # 1 MB memory
+        self.address_range = range(0, self.memory_size) # Valid address range
+        self.storage = {i: 0 for i in range(self.memory_size)} # Initialize memory with zeros
+        self.word_mask = 0xFFFFFFFF  # 32-bit word mask
+        self.cache = None  # Placeholder for cache integration
+        logger.info("Memory initialized with size 1 MB")
 
-    def load_word(self, address: int) -> int: 
-        logger.info(f"Loading word from address {address}")
+    def _validate_address(self, address: int) -> None:
+        if not isinstance(address, int):
+            raise TypeError("Address must be an integer")
+        if address not in self.address_range:
+            raise ValueError(f"Address {address} out of range. Valid range: 0 to {self.memory_size - 1}")
+
+    def load_word(self, address: int) -> int:
+        try:
+            self._validate_address(address)
+            logger.info(f"Loading word from address {address}")
+        except (TypeError, ValueError) as e:
+            logger.error(f"Error loading word: {e}")
+            raise
         return self.storage.get(address, 0)
+
     
     def store_word(self, address: int, value: int) -> None:
-        self.storage[address] = value
+        try:
+            self._validate_address(address)
+            logger.info(f"Loading word from address {address}")
+        except (TypeError, ValueError) as e:
+            logger.error(f"Error storing word: {e}")
+            raise
+        masked_value = value & self.word_mask
+        self.storage[address] = masked_value
         logger.info(f"Stored word at address {address}: {value}")
 
 
@@ -293,26 +318,32 @@ class cache:
     def __init__(self) -> None:
         logger.info("Initializing Cache")
         self.blocks = {}
+        self.cache_line = {
+            index: {
+                "tag": ...,
+                "valid": ...,
+                "dirty": ...,
+                "data": [...],
+            }
+}
+
+        
 
     def hit_or_miss(self, address: int) -> bool:
         logger.info(f"Checking cache for address {address}")
         return address in self.blocks
     
-    def load_from_memory(self, address: int, memory: memory_bus) -> int:
+    def read(self, address: int, memory: memory_bus) -> int:
         pass
 
-    def store_to_memory(self, address: int, value: int, memory: memory_bus) -> None:
+    def write(self, address: int, value: int, memory: memory_bus) -> None:
         pass 
 
     def block_replacement_policy(self):
         pass
 
     
-"""
-- Basic structure (e.g., direct-mapped or associative)
-- Hit/miss logic
-- Integration with memory
-"""
+
 
 
 
