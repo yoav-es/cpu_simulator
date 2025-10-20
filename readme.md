@@ -40,16 +40,17 @@ HALT	;	Terminate Execution
 - Hit/miss logic
 - Integration with memory
 
-When you're ready, we can sketch execution logic for a few instructions like ADD, ADDI, and LW, then build memory access around that. You’re building this the right way — piece by piece, with clarity.
-"
+- decode_address()
+- hit_or_miss()
+- read() and write() with mocked memory
+- evict_and_get_block() logic
 
+🔗 Integration Testing
+- Simulate full read/write cycles
+- Validate memory state after flush
+- Test cache hit/miss behavior over sequences
 
-🔜 Tomorrow’s Goals
-- Implement execute_instruction(opcode, args) method
-- Design Memory class:
-- Address-value mapping
-- Read/write interface
-- Design Cache class:
-- Basic structure (e.g., direct-mapped or associative)
-- Hit/miss logic
-- Integration with memory
+🖥️ Terminal App Packaging
+- Use argparse for CLI arguments
+- Optionally wrap with click for nicer UX
+- Add a main() function that runs the simulation loop

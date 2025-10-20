@@ -352,36 +352,57 @@ class cache:
             return block.data[offset:offset+1]
         logger.info(f"Cache miss on read for address {address}")
         # implement block fetch from memory
-        self.block_replacement_policy()
-        return None
+        new_block = self.evict_and_get_block(tag, index, memory)
+        return new_block.data[offset:offset+1]
 
-    # def write(self, address: int, value: int, memory: memory_bus) -> None:
-    #     tag, index, offset = self.decode_address(address)
-    #     block = self.blocks[index]
-
-    #     if self.hit_or_miss(block, tag):
-    #         logger.info(f"Writing {value} to cache at address {address}")
-    #         block.data[offset] = value
-    #         block.dirty = True
-    #         return
-
-    #     logger.info(f"Cache miss on write at address {address}")
-    #     self.write_back_if_dirty(block, index, memory)
-
-    #     new_block = self.fetch_block_from_memory(tag, index, memory)
-    #     new_block.data[offset] = value
-    #     new_block.dirty = True
-    #     self.blocks[index] = new_block
-
+    def write(self, address: int, value: int, memory: memory_bus) -> None:
+        tag, index, offset = self.decode_address(address)
+        block = self.blocks[index]
+        if self.hit_or_miss(block, tag):
+            logger.info(f"Writing to cache for address {address}")
+            block.data[offset] = value
+            block.dirty = True
+            return
+            # Update cache block data
+        logger.info(f"Cache miss on write to address {address}")
+        # call block replacement policy 
+        logger.info(f"Evicting block and fetching new block for address {address}")
+        new_block = self.evict_and_get_block(tag, index, memory)
+        new_block.data[offset] = value
+        block.dirty = True
+        logger.info(f"Writing to cache for address {address}")
 
 
-    def block_replacement_policy(self):
-        pass
-
+    def evict_and_get_block(self, tag: int, index: int, memory: memory_bus) -> Block:
+        block = self.blocks[index]
+        # calcuate base address of block in memory
+        base_address = (block.tag << 8) | (index << 3)
+        if block.valid and block.dirty:
+            # Write back data to memory
+            for i in range(self.block_size):
+                memory.store_word(base_address + i * 4, block.data[i])
+        # calculate base address for new block
+        base_address = (tag << 8) | (index << 3)
+        # Create new block 
+        new_block = Block(tag=tag)
+        # load data from memory into new block
+        for i in range(self.block_size):
+            word = memory.load_word(base_address + i * 4)
+            new_block.data[i] = word
+        new_block.valid = True
+        # evict old block and replace with new block
+        self.blocks[index] = new_block
+        return new_block
     
-
-
-
+    def flush(self, memory: memory_bus) -> None:
+        logger.info("flushing cache to memory")
+        for index, block in enumerate(self.blocks):
+            base_address = (block.tag << 8) | (index << 3)
+            if block.valid and block.dirty:
+                for i in range(self.block_size):
+                    memory.store_word(base_address + i * 4, block.data[i])
+                block.dirty = False
+        logger.info("Cache flush complete")
 
 
 # Main execution
@@ -391,3 +412,4 @@ cpu_sim.parse_instructions()
 cpu_sim.load_memory('files/data_input.txt')
 cpu_sim.parse_instructions()
 cpu_sim.execute_instruction('ADDI', ['R1', 'R2', '000000011'])  # Example execution
+
