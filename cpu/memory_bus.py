@@ -11,7 +11,6 @@ class MemoryBus:
         self.address_range = range(self.memory_size)
         self.storage = {i: 0 for i in self.address_range}
         self.word_mask = 0xFFFFFFFF  # 32-bit word mask
-        self.cache = None  # Placeholder for cache integration
         logger.info(f"Memory initialized with size {self.memory_size} bytes")
 
     def _validate_address(self, address: int) -> None:

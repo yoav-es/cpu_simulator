@@ -1,56 +1,60 @@
-Project Ideas
-While it is completely up to you to decide what to implement for your CPU simulator, here are some ideas for what your program could accomplish:
+# 🧠 CPU Simulator (MIPS-Inspired)
 
-Create classes that mimic the functionalities of a CPU, cache, and memory bus
-Fetch and parse instructions from an input file
-Fetch and parse initialization values for the Memory Bus from a separate input file
-Send CPU instructions and initial Memory Bus values to the CPU and Memory Bus, respectively
-Provide console output to the user documenting the stages of input processing
-Implement an ISA that can handle MIPS Instructions such as the following:
+This project simulates a simplified CPU architecture in Python, modeling core components like the CPU, memory bus, and cache. It’s designed for educational and portfolio purposes — not for real embedded hardware — but it demonstrates key architectural concepts and system-level interactions.
 
-Instruction	Operand	Meaning
-ADD	Rd, Rs, Rt	Rd <- Rs + Rt;
-ADDI	Rt, Rs, immd	Rt <- Rs + immd
-SUB	Rd, Rs, Rt	Rd <- Rs - Rt
-SLT	Rd, Rs, Rt	If (Rs < Rt) then Rd <- 1 else Rd <- 0
-BNE	Rs, Rt, offset	If (Rs not equal Rt) then PC <- (PC + 4) + offset * 4
-J	target	PC <- target * 4
-JAL	target	R7 <- PC + 4; PC <- target *4
-LW	Rt, offset(Rs)	Rt <- MEM[Rs + offset]
-SW	Rt, offset(Rs)	MEM[Rs + offset] <- Rt
-CACHE	Code	Code = 0(Cache off) Code = 1(Cache on), Code = 2(Flush cache)
-HALT	;	Terminate Execution
+---
 
-"✅ Today’s Progress
-- CPU class with:
-- Program counter
-- Register file
-- Instruction/data loading
-- Instruction parsing with validation
-- Memory input format locked (binary address, decimal value)
-- HALT logic scoped for future control flow
+## 🚀 Features
 
-🔜 Tomorrow’s Goals
-- Implement execute_instruction(opcode, args) method
-- Design Memory class:
-- Address-value mapping
-- Read/write interface
-- Design Cache class:
-- Basic structure (e.g., direct-mapped or associative)
-- Hit/miss logic
-- Integration with memory
+### CPU Core
+- Program counter and register file
+- Instruction parsing and execution
+- HALT logic and control flow
 
-- decode_address()
-- hit_or_miss()
-- read() and write() with mocked memory
-- evict_and_get_block() logic
+### Memory Bus
+- 1MB addressable memory
+- Word-level read/write interface
+- Input file support for memory initialization
 
-🔗 Integration Testing
-- Simulate full read/write cycles
-- Validate memory state after flush
-- Test cache hit/miss behavior over sequences
+### Cache System
+- Direct-mapped cache with block-based storage
+- Hit/miss detection and block replacement
+- Write-back policy with flush support
 
-🖥️ Terminal App Packaging
-- Use argparse for CLI arguments
-- Optionally wrap with click for nicer UX
-- Add a main() function that runs the simulation loop
+### Instruction Set Architecture (ISA)
+
+| Instruction | Operands         | Meaning                                      |
+|-------------|------------------|----------------------------------------------|
+| `ADD`       | Rd, Rs, Rt       | Rd ← Rs + Rt                                 |
+| `ADDI`      | Rt, Rs, immd     | Rt ← Rs + immd                               |
+| `SUB`       | Rd, Rs, Rt       | Rd ← Rs - Rt                                 |
+| `SUBI`      | Rd, Rs, immd     | Rd ← Rs - immd                               | 
+| `SLT`       | Rd, Rs, Rt       | Rd ← (Rs < Rt) ? 1 : 0                       |
+| `BNE`       | Rs, Rt, offset   | If Rs ≠ Rt → PC ← (PC + 4) + offset × 4      |
+| `J`         | target           | PC ← target × 4                              |
+| `JAL`       | target           | R7 ← PC + 4; PC ← target × 4                 |
+| `LW`        | Rt, offset(Rs)   | Rt ← MEM[Rs + offset]                        |
+| `SW`        | Rt, offset(Rs)   | MEM[Rs + offset] ← Rt                        |
+| `CACHE`     | Code             | 0 = off, 1 = on, 2 = flush                   |
+| `HALT`      | ;                | Terminate execution                          |
+
+---
+
+## 📦 How It Works
+
+1. **Input Files**
+   - Instruction file: contains ISA commands
+   - Memory file: initializes memory with address-value pairs
+
+2. **Execution Flow**
+   - CPU loads instructions and memory
+   - Instructions are parsed and executed sequentially
+   - Cache intercepts memory access and manages block-level data
+   - Console output logs each stage of execution
+
+3. **CLI Interface**
+   - Uses `argparse` for command-line arguments
+   - Optional: wrap with `click` for enhanced UX
+
+---
+
