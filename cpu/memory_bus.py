@@ -8,21 +8,26 @@ logger.info("Memory module initialized")
 
 class MemoryBus:
     """class memory bus"""
-    def __init__(self) -> None:
+    def __init__(self, size=MEMORY_SIZE) -> None:
         # initialize values for memory bus
         logger.info("Initializing memory")
-        self.memory_size = MEMORY_SIZE  # 1 MB memory by default
+        self.memory_size = size  # 1 MB memory by default
         self.address_range = range(self.memory_size)
         self.storage = {i: 0 for i in self.address_range}
         self.word_mask = 0xFFFFFFFF  # 32-bit word mask
         logger.info(f"Memory initialized with size {self.memory_size} bytes")
 
     def _validate_address(self, address: int) -> None:
-        """memory address validation"""
+        """Address Validation"""
+        logger.info(f'validating {address}')
+        
+        if address is None:
+            raise TypeError("Address cannot be None")
         if not isinstance(address, int):
             raise TypeError("Address must be an integer")
         if address not in self.address_range:
             raise ValueError(f"Address {address} out of range (0 to {self.memory_size - 1})")
+
 
     def _access_memory(self, address: int, value: Optional[int] = None) -> int:
         """Memory access function: handles both read and write operations"""

@@ -35,50 +35,85 @@ class Cache:
         """writing values back to memory, to prevent data loss"""
         for i in range(self.block_size):
             memory.store_word(base_address + i * self.word_size, block.data[i])
-
+        block.dirty = False
+        
     def decode_address(self, address: int) -> tuple[int, int, int]:
-        """decode address from int to binary"""
-        offset_mask = self.block_size - 1
-        index_mask = self.cache_lines - 1
+        # Number of bits for offset = log2(block size)
+        offset_bits = int(math.log2(self.block_size))
+        
+        # Number of bits for index = log2(cache lines)
+        index_bits = int(math.log2(self.cache_lines))
+        
+        # Masks
+        offset_mask = (1 << offset_bits) - 1
+        index_mask = (1 << index_bits) - 1
+
+        # Extract parts
         offset = address & offset_mask
-        index = (address >> 3) & index_mask
-        tag = address >> BLOCK_SIZE
+        index = (address >> offset_bits) & index_mask
+        tag = address >> (offset_bits + index_bits)
+
         return tag, index, offset
 
-    def hit_or_miss(self, block: Block, tag: int) -> bool:
+    
+    @staticmethod
+    def hit_or_miss(block: Block, tag: int) -> bool:
         """Detect cache hit or miss"""
         return block.valid and block.tag == tag
 
-    def read(self, address: int, memory: MemoryBus) -> list[int]:
-        """read value from memory by address"""
+    # def read(self, address: int, memory: MemoryBus) -> list[int]:
+    #     """read value from memory by address"""
+    #     tag, index, offset = self.decode_address(address)
+    #     block = self.blocks[index]
+    #     if self.hit_or_miss(block, tag):
+    #         logger.info(f"Cache hit on read at address {address}")
+    #         return block.data[offset:offset + 1]
+    #     logger.info(f"Cache miss on read at address {address}")
+    #     block = self.replace_block(tag, index, memory)
+    #     return block.data[offset:offset + 1]
+
+    # def write(self, address: int, value: int, memory: MemoryBus) -> None:
+    #     """write value into memory by address"""
+    #     tag, index, offset = self.decode_address(address)
+    #     block = self.blocks[index]
+
+    #     if self.hit_or_miss(block, tag):
+    #         # cache hit
+    #         logger.info(f"Cache hit on write at address {address}")
+    #         block.data[offset] = value
+    #         block.dirty = True
+    #     else:
+    #         #cache miss
+    #         logger.info(f"Cache miss on write at address {address}")
+    #         block = self.replace_block(tag, index, memory)
+    #         block.data[offset] = value
+    #         # mark as dirty - data written to it
+    #         block.dirty = True
+    #         logger.info(f"Value written to cache after block replacement")
+    def _access_block(self, address: int, memory: MemoryBus) -> tuple[Block, int]:
+        """Decode address and ensure block is present in cache."""
         tag, index, offset = self.decode_address(address)
         block = self.blocks[index]
+
         if self.hit_or_miss(block, tag):
-            logger.info(f"Cache hit on read at address {address}")
-            return block.data[offset:offset + 1]
-        logger.info(f"Cache miss on read at address {address}")
-        block = self.replace_block(tag, index, memory)
+            logger.info(f"Cache hit at address {address}")
+        else:
+            logger.info(f"Cache miss at address {address}")
+            block = self.replace_block(tag, index, memory)
+
+        return block, offset
+
+    def read(self, address: int, memory: MemoryBus) -> list[int]:
+        """Read value from memory by address."""
+        block, offset = self._access_block(address, memory)
         return block.data[offset:offset + 1]
 
     def write(self, address: int, value: int, memory: MemoryBus) -> None:
-        """write value into memory by address"""
-        tag, index, offset = self.decode_address(address)
-        block = self.blocks[index]
-
-        if self.hit_or_miss(block, tag):
-            # cache hit
-            logger.info(f"Cache hit on write at address {address}")
-            block.data[offset] = value
-            block.dirty = True
-        else:
-            #cache miss
-            logger.info(f"Cache miss on write at address {address}")
-            block = self.replace_block(tag, index, memory)
-            block.data[offset] = value
-            # mark as dirty - data written to it
-            block.dirty = True
-            logger.info(f"Value written to cache after block replacement")
-
+        """Write value into memory by address."""
+        block, offset = self._access_block(address, memory)
+        block.data[offset] = value
+        block.dirty = True
+        logger.info(f"Value written to cache at address {address}")
 
     def replace_block(self, tag: int, index: int, memory: MemoryBus) -> Block:
         """Block Replacement algorithm"""
