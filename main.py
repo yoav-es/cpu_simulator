@@ -32,18 +32,16 @@ def main():
     try:
         cpu_sim = CPU()
         logger.info("Loading instructions and memory...")
-        cpu_sim.load_instruction(args.instructions)
-        cpu_sim.load_memory(args.memory)
-        cpu_sim.validate_instructions()
+        cpu_sim._load_instruction(args.instructions)
+        cpu_sim._load_memory(args.memory)
+        cpu_sim._validate_instructions()
         logger.info("Starting instruction execution...")
         cpu_sim.execute_instructions()
-
-        # Optional: manual instruction test
-        # cpu_sim.execute_instruction('ADDI', ['R1', 'R2', '000000011'])
-
         logger.info("Simulation complete.")
     except Exception as e:
         logger.error(f"Simulation failed: {e}")
 
 if __name__ == "__main__":
     main()
+
+    # python main.py --instructions files/instruction_input.txt --memory files/data_input.txt

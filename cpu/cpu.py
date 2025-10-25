@@ -1,3 +1,4 @@
+#imports 
 import sys
 from .memory_bus import MemoryBus
 from .cache import Cache
@@ -9,8 +10,9 @@ logger.info("CPU initialized")
 
 # CPU Simulator Class
 class CPU:
-    # Initialize CPU with registers, program counter, instruction set, memory bus, and cache
+    """CPU Simulator Class"""
     def __init__(self) -> None:
+        """Initialize CPU with registers, program counter, memory, and cache."""
         logger.info("Initializing CPU Simulator")
         self.registers = [0] * BUS_LENGTH
         self.pc = 0  # Program counter
@@ -18,7 +20,6 @@ class CPU:
         self.cache = None
         self.memory = MemoryBus()
         self.halted = False
-        # Define instruction set with expected argument counts
         self.instruction_set = {
             "ADD": {"args": 3},
             "ADDI": {"args": 3},
@@ -33,61 +34,17 @@ class CPU:
             "CACHE": {"args": 1},
             "HALT": {"args": 1}
         }
-    # load file and return lines for processing
+
+    # file loading and handling
     @staticmethod
     def _load_file_lines(filepath):
+        """Load lines from a file and return them as a list."""
         logger.info(f"Loading file: {filepath}")
         with open(filepath, 'r') as file:
             return [line.strip() for line in file.readlines()]
     
-    # Validate register indices
-    @staticmethod
-    def _valid_registers(*indices: int, allow_r0: bool = False) -> bool:
-        return all(isinstance(idx, int) and 0 <= idx < BUS_LENGTH for idx in indices) and (allow_r0 or 0 not in indices)
-
-    @staticmethod
-    def validate_offset(offset: int, word_size: int) -> None:
-        if not isinstance(offset, int):
-            raise TypeError(f"Offset must be an integer, got {type(offset).__name__}")
-        if word_size <= 0:
-            raise ValueError(f"Word size must be positive, got {word_size}")
-        if offset % word_size != 0 or not (INT16_MIN <= offset <= INT16_MAX):
-            raise Exception(f"Invalid offset: {offset}")
-        
-
-    @staticmethod
-    def _parse_args(args: list[str], imm: bool = False) -> tuple[int, int, int]:
-        arg1 = int(args[0][1:])
-        arg2 = int(args[1][1:])
-        arg3 = CPU.validate_immediate_value(args[2][1:]) if imm else int(args[2][1:])
-        return arg1, arg2, arg3
-
-
-    @staticmethod
-    def validate_immediate_value(value: str) -> int:
-        """Validate a binary immediate string and return its signed integer value."""
-        if not isinstance(value, str) or not value:
-            raise ValueError("Immediate must be a non-empty binary string")
-        if not all(c in '01' for c in value):
-            raise ValueError(f"Immediate value is not a valid binary string: {value}")
-        
-        bits = len(value)
-        if bits > BUS_LENGTH:
-            raise ValueError(f"Immediate width greater than {BUS_LENGTH} bits not supported")
-        
-        unsigned = int(value, 2)
-        sign_bit = 1 << (bits - 1)
-        
-        # Convert from two's complement to signed int
-        signed = unsigned - (1 << bits) if unsigned & sign_bit else unsigned
-        
-        if not (-(2**31) <= signed <= (2**31 - 1)):
-            raise ValueError(f"Immediate value out of {BUS_LENGTH}-bit signed range: {signed}")        
-        return signed
-
-
-    # Load instructions from file
-    def load_instruction(self, instructions_file):
+    def _load_instruction(self, instructions_file):
+        """Load instructions from file into the CPU."""
         if not instructions_file:
             logger.error("No instruction file provided.")
             sys.exit(1)
@@ -95,8 +52,8 @@ class CPU:
         for line in self._load_file_lines(instructions_file):
             self.load_instructions.append(line.split(','))
     
-    # Load memory initialization values from file
-    def load_memory(self, data_file):
+    def _load_memory(self, data_file):
+        """Load memory initialization values from file."""
         if not data_file:
             logger.error("No data file provided.")
             sys.exit(1)
@@ -111,8 +68,43 @@ class CPU:
             sys.exit(1)
         logger.info("Finished loading memory initialization values.")
 
-    def validate_instructions(self) -> None:
+    #input validation 
+
+    @staticmethod
+    def _valid_registers(*indices: int, allow_r0: bool = False) -> bool:
+        """Validate register indices."""
+        return all(isinstance(idx, int) and 0 <= idx < BUS_LENGTH for idx in indices) and (allow_r0 or 0 not in indices)
+
+    @staticmethod
+    def _validate_offset(offset: int, word_size: int) -> None:
+        """Validate offset for branch and memory instructions."""
+        if not isinstance(offset, int):
+            raise TypeError(f"Offset must be an integer, got {type(offset).__name__}")
+        if word_size <= 0:
+            raise ValueError(f"Word size must be positive, got {word_size}")
+        if offset % word_size != 0 or not (INT16_MIN <= offset <= INT16_MAX):
+            raise Exception(f"Invalid offset: {offset}")
+        
+
+    @staticmethod
+    def _validate_immediate_value(value: str) -> int:
+        """Validate a decimal immediate string and return its signed integer value."""
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError("Immediate must be a non-empty string")
+        try:
+            signed = int(value)
+        except ValueError:
+            raise ValueError(f"Immediate value is not a valid integer: {value}")
+        # Check 32-bit signed integer range
+        if not (-(2**31) <= signed <= (2**31 - 1)):
+            raise ValueError(f"Immediate value out of 32-bit signed range: {signed}")
+        return signed
+
+
+    def _validate_instructions(self) -> None:
+        """Validate loaded instructions against the instruction set."""
         logger.info("Validating instructions")
+        # Iterate through loaded instructions and validate each
         for instruction in self.load_instructions:
             opcode = instruction[0]
             args = instruction[1:]
@@ -124,27 +116,21 @@ class CPU:
                 logger.warning(f"Incorrect number of arguments for {opcode}. Expected {expected_arg_count}, got {len(args)}")
                 continue
             logger.info(f"Validated {opcode} with args: {args}")
-
-    def execute_instructions(self) -> None:
-        logger.info("Starting instruction execution")
-        while not self.halted and self.pc < len(self.load_instructions):
-            current_pc = self.pc
-            opcode, *args = self.load_instructions[self.pc // WORD_SIZE]
-            try:
-                logger.info(f"Executing {opcode} with args: {args}")
-                self.execute_instruction(opcode, args)
-                # Ensure R0 is always zero
-                self.registers[0] = 0
-                if self.pc == current_pc:
-                    self.pc += WORD_SIZE
-            except Exception as e:
-                logger.error(f"Error executing instruction at PC {self.pc}: {e}")
-                self.halted = True
-        logger.info("Finished instruction execution.")
+    
+    #Argument parsing 
+    @staticmethod
+    def _parse_args(args: list[str], imm: bool = False) -> tuple[int, int, int]:
+        """Parse instruction arguments and return register indices and immediate value if applicable."""
+        arg1 = int(args[0][1:])
+        arg2 = int(args[1][1:])
+        arg3 = CPU._validate_immediate_value(args[2]) if imm else int(args[2][1:])    
+        return arg1, arg2, arg3
 
 
-    # # Execute arithmetic instruction (ADD, ADDI, SUB, SUBI)
+
+    #Instruction handlers 
     def execute_arithmetic(self, args: list[str], op_func, op_name: str, immediate: bool = False) -> None:
+        """Execute arithmetic instructions (ADD, ADDI, SUB, SUBI)."""
         if immediate:
             dest_idx, src_idx, value = self._parse_args(args, imm=True)
         else:
@@ -158,6 +144,7 @@ class CPU:
 
 
     def execute_slt(self, args: list[str]) -> None:
+        """Execute set on less than instruction."""
         logger.info("Executing SLT instruction")
         dest_idx, src_idx, rt_idx = self._parse_args(args)
 
@@ -167,44 +154,46 @@ class CPU:
         self.registers[dest_idx] = int(self.registers[src_idx] < self.registers[rt_idx])
         logger.info(f"SLT executed: R{dest_idx} = (R{src_idx} < R{rt_idx}) → {self.registers[dest_idx]}")
 
-    # Execute branch not equal instruction
     def execute_bne(self, args: list[str]) -> None:
+        """Execute branch not equal instruction."""
         logger.info("Executing BNE instruction")
         rs_idx, rt_idx, offset = self._parse_args(args)
         if not self._valid_registers(rs_idx, rt_idx):
             raise Exception(f"Invalid register index: src={rs_idx}, rt={rt_idx}")
-        self.validate_offset(offset, WORD_SIZE)
+        self._validate_offset(offset, WORD_SIZE)
         if self.registers[rs_idx] != self.registers[rt_idx]:
             self.pc = self.pc + WORD_SIZE + offset * WORD_SIZE
             logger.info(f"BNE taken: PC updated to {self.pc}")
 
-    # Execute jump instruction
     def execute_jump(self, args: list[str], link: bool = False) -> None:
+        """Execute jump (J) and jump and link (JAL) instructions."""
         target = args[0]
         if not target.isdigit():
             raise Exception("Jump target must be a number")
 
         target_idx = int(target)
-        if not (0 <= target_idx < len(self.load_instructions)):
+        if not (0 <= target_idx < len(self.load_instructions)*WORD_SIZE):
             raise Exception("Jump target out of instruction range")
         # Handle JAL instruction
         if link:
             self.registers[7] = self.pc + WORD_SIZE  # Save return address in R7
             logger.info(f"JAL executed: Return address saved in R7: {self.registers[7]}")
-
-        self.pc = target_idx * WORD_SIZE
+        self.pc = target_idx
         logger.info(f"{'JAL' if link else 'J'} executed: Jumped to instruction index {target_idx}")
 
     def execute_memory_action(self, args: list[str], code: str) -> None:
+        """Execute load word (LW) and store word (SW) instructions."""
         rt, offset_expr = args
         rt_idx = int(rt[1:])
+        # calculate offset and rs index
         offset_str, rs_str = offset_expr.replace(')', '').split('(')
         rs_idx = int(rs_str[1:])
         offset = int(offset_str)
-        if not self.validate_offset(offset, WORD_SIZE):
+        if not self._validate_offset(offset, WORD_SIZE):
             raise Exception(f"Invalid offset: {offset}")
         if not self._valid_registers(rt_idx):
             raise Exception(f"Invalid register index: src={rs_idx}, rt={rt_idx}")
+        # select between load and store
         if code == 'LW':
             self.registers[rt_idx] = self.memory.load_word(self.registers[rs_idx] + offset)
         elif code == 'SW':
@@ -213,12 +202,12 @@ class CPU:
 
 
     def execute_cache(self, code: str) -> None:
+        """Execute CACHE instruction to manage cache operations. CAN be disable, enable, or flush the cache."""
         if not code.isdigit() or int(code) not in range(0, 3):
             raise Exception("Invalid CACHE operation code")
         int_code = int(code)
         operation = {0: "disable", 1: "enable", 2: "flush"}[int_code]
         logger.info(f"Handling CACHE operation: {code} ({operation})")
-
         match int_code:
             case 0:
                 logger.info("Disabling cache")
@@ -241,10 +230,9 @@ class CPU:
                 else:
                     logger.info("Cache is disabled, cannot flush")
 
-
-
-    # Execute instruction based on opcode
-    def execute_instruction(self, opcode, args):
+    #instruction dispatching
+    def dispatch_instruction(self, opcode, args):
+        """Execute a single instruction based on the opcode and arguments."""
         match opcode:
             case "ADD":
                 self.execute_arithmetic(args, operator.add, opcode)
@@ -270,7 +258,26 @@ class CPU:
                 self.execute_cache(args[0])
             case "HALT":
                 self.halted = True
-                print("Halting execution.")
         logger.info(f"Executed instruction: {opcode} with args: {args}")
         return 
     
+
+    #execution loop 
+    def execute_instructions(self) -> None:
+        """Execute loaded instructions sequentially."""
+        logger.info("Starting instruction execution")
+        while not self.halted and self.pc < len(self.load_instructions) * WORD_SIZE:
+            current_pc = self.pc
+            opcode, *args = self.load_instructions[self.pc // WORD_SIZE]
+            try:
+                logger.info(f"Executing {opcode} with args: {args}")
+                self.dispatch_instruction(opcode, args)
+                # Ensure R0 is always zero
+                self.registers[0] = 0
+                if self.pc == current_pc:
+                    self.pc += WORD_SIZE
+            except Exception as e:
+                logger.error(f"Error executing {opcode} instruction at PC {self.pc}: {e}")
+                self.halted = True
+                return
+        logger.info(f"Finished {opcode} instructions execution.")
