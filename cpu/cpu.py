@@ -42,26 +42,42 @@ class CPU:
         logger.info(f"Loading file: {filepath}")
         with open(filepath, 'r') as file:
             return [line.strip() for line in file.readlines()]
-    
-    def _load_instruction(self, instructions_file):
+
+
+    def _load_instructions(self, instructions_file):
         """Load instructions from file into the CPU."""
         if not instructions_file:
             logger.error("No instruction file provided.")
             sys.exit(1)
         logger.info("loading instructions")
-        for line in self._load_file_lines(instructions_file):
-            self.load_instructions.append(line.split(','))
-    
+        lines = self._load_file_lines(instructions_file)
+        if lines is None:
+            logger.error("Failed to load instructions due to file read error.")
+            sys.exit(1)
+        try:
+            for line in lines:
+                self.load_instructions.append(line.split(','))
+        except Exception as e:
+            logger.error(f"Error parsing instructions: {e}")
+            sys.exit(1)
+        logger.info("Finished loading instructions.")
+
+
+
     def _load_memory(self, data_file):
         """Load memory initialization values from file."""
         if not data_file:
             logger.error("No data file provided.")
             sys.exit(1)
         logger.info("loading memory initialization values")
+        lines = self._load_file_lines(data_file)
+        if lines is None:
+            logger.error("Failed to load memory due to file read error.")
+            sys.exit(1)
         try:
-            for line in self._load_file_lines(data_file):
+            for line in lines:
                 entry = line.split(',')
-                self.memory.store_word(int(entry[0],2), int(entry[1]))
+                self.memory.store_word(int(entry[0], 2), int(entry[1]))
                 logger.info(f"Loaded memory initialization value: Address {entry[0]} Data {entry[1]}")
         except Exception as e:
             logger.error(f"Error loading memory initialization values: {e}")
@@ -157,12 +173,14 @@ class CPU:
     def execute_bne(self, args: list[str]) -> None:
         """Execute branch not equal instruction."""
         logger.info("Executing BNE instruction")
-        rs_idx, rt_idx, offset = self._parse_args(args)
+        rs_idx, rt_idx, offset = self._parse_args(args,imm=True)
         if not self._valid_registers(rs_idx, rt_idx):
             raise Exception(f"Invalid register index: src={rs_idx}, rt={rt_idx}")
+        #Offset validation
+        offset = int(offset) * WORD_SIZE
         self._validate_offset(offset, WORD_SIZE)
         if self.registers[rs_idx] != self.registers[rt_idx]:
-            self.pc = self.pc + WORD_SIZE + offset * WORD_SIZE
+            self.pc = self.pc + WORD_SIZE + offset
             logger.info(f"BNE taken: PC updated to {self.pc}")
 
     def execute_jump(self, args: list[str], link: bool = False) -> None:
@@ -171,15 +189,15 @@ class CPU:
         if not target.isdigit():
             raise Exception("Jump target must be a number")
 
-        target_idx = int(target)
-        if not (0 <= target_idx < len(self.load_instructions)*WORD_SIZE):
+        target_address = int(target) * WORD_SIZE
+        if not (0 <= target_address < len(self.load_instructions)*WORD_SIZE):
             raise Exception("Jump target out of instruction range")
         # Handle JAL instruction
         if link:
             self.registers[7] = self.pc + WORD_SIZE  # Save return address in R7
             logger.info(f"JAL executed: Return address saved in R7: {self.registers[7]}")
-        self.pc = target_idx
-        logger.info(f"{'JAL' if link else 'J'} executed: Jumped to instruction index {target_idx}")
+        self.pc = target_address
+        logger.info(f"{'JAL' if link else 'J'} executed: Jumped to instruction index {target_address}")
 
     def execute_memory_action(self, args: list[str], code: str) -> None:
         """Execute load word (LW) and store word (SW) instructions."""
@@ -189,9 +207,8 @@ class CPU:
         offset_str, rs_str = offset_expr.replace(')', '').split('(')
         rs_idx = int(rs_str[1:])
         offset = int(offset_str)
-        if not self._validate_offset(offset, WORD_SIZE):
-            raise Exception(f"Invalid offset: {offset}")
-        if not self._valid_registers(rt_idx):
+        self._validate_offset(offset, WORD_SIZE)
+        if not self._valid_registers(rt_idx, rs_idx):
             raise Exception(f"Invalid register index: src={rs_idx}, rt={rt_idx}")
         # select between load and store
         if code == 'LW':
@@ -258,6 +275,11 @@ class CPU:
                 self.execute_cache(args[0])
             case "HALT":
                 self.halted = True
+            case "NOP":
+                pass  # Do nothing
+            case _:
+                raise ValueError(f"Unknown opcode: {opcode}")
+
         logger.info(f"Executed instruction: {opcode} with args: {args}")
         return 
     

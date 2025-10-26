@@ -120,4 +120,6 @@ class Cache:
                 self._write_back(block, base_address, memory)
                 # mark block as clean - ready to use again
                 block.dirty = False
+                block.valid = False
+                block.data  = [0] * self.block_size
         logger.info("Cache flush complete")

@@ -17,6 +17,14 @@ class MemoryBus:
         self.word_mask = 0xFFFFFFFF  # 32-bit word mask
         logger.info(f"Memory initialized with size {self.memory_size} bytes")
 
+    def __getitem__(self, address: int) -> int:
+        """Enable bracket-style memory read access."""
+        return self.storage.get(address, 0)
+
+    def __setitem__(self, address: int, value: int) -> None:
+        """Enable bracket-style memory write access."""
+        self.storage[address] = value & self.word_mask
+
     def _validate_address(self, address: int) -> None:
         """Address Validation"""
         logger.info(f'validating {address}')

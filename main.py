@@ -32,7 +32,7 @@ def main():
     try:
         cpu_sim = CPU()
         logger.info("Loading instructions and memory...")
-        cpu_sim._load_instruction(args.instructions)
+        cpu_sim._load_instructions(args.instructions)
         cpu_sim._load_memory(args.memory)
         cpu_sim._validate_instructions()
         logger.info("Starting instruction execution...")

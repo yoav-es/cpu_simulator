@@ -111,3 +111,4 @@ def test_load_word_address_too_low():
 
     with pytest.raises(ValueError):
         mem.load_word(-4)
+
