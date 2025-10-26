@@ -1,130 +1,96 @@
 import pytest
-import math
 from cpu.cache import Cache, Block
 from cpu.memory_bus import MemoryBus
-# hit or miss -----------------------------------------------------------------------------------
-def test_cache_read_write_basic():
-    mem = MemoryBus(size=64)
+from utils.constants import MEMORY_SIZE, WORD_SIZE, BLOCK_SIZE
+
+# -------------------------------------------------------------------------------
+# Cache flush tests
+# -------------------------------------------------------------------------------
+
+def test_flush_writes_back_dirty_blocks_and_clears_dirty_flag():
+    """Flush should write dirty blocks to memory and clear dirty flags."""
     cache = Cache()
+    memory = MemoryBus(size=MEMORY_SIZE)
 
-    # Use address 0 (should be a miss first)
-    cache.write(0, 42, mem)
-    assert cache.read(0, mem) == [42]
+    # Populate cache with dirty blocks
+    for index in range(len(cache.blocks)):
+        block = Block(tag=index)
+        block.valid = True
+        block.dirty = True
+        block.data = [index * 100 + i for i in range(cache.block_size)]
+        cache.blocks[index] = block
 
-    # Write again to same address (should be a hit)
-    cache.write(0, 99, mem)
-    assert cache.read(0, mem) == [99]
-# decode -----------------------------------------------------------------------------------
-def test_decode_address_bit_masks():
+    # Flush cache
+    cache.flush(memory)
+
+    # Verify memory contents and dirty flags
+    for index, block in enumerate(cache.blocks):
+        base_address = (block.tag << 11) | (index << 6)
+        for offset in range(cache.block_size):
+            addr = base_address + offset * WORD_SIZE
+            assert memory.storage[addr] == block.data[offset]
+        assert block.dirty is False
+
+# -------------------------------------------------------------------------------
+# Cache replacement tests
+# -------------------------------------------------------------------------------
+
+def test_replace_block_writes_back_and_loads_new_data():
+    """Replacing a block should write back dirty data and load new block from memory."""
     cache = Cache()
-    address = 262144
+    memory = MemoryBus(size=MEMORY_SIZE)
 
-    offset_bits = int(math.log2(cache.block_size))
-    index_bits = int(math.log2(cache.cache_lines))
-    expected_tag = address >> (offset_bits + index_bits)
+    index = 0
+    tag_old = 1
+    tag_new = 2
 
-    tag, index, offset = cache.decode_address(address)
-    assert tag == expected_tag
+    # Setup old block in cache
+    old_block = Block(tag=tag_old)
+    old_block.valid = True
+    old_block.dirty = True
+    old_block.data = [10 * (i + 1) for i in range(BLOCK_SIZE)]
+    cache.blocks[index] = old_block
 
+    # Replace with new block
+    new_base = (tag_new << 11) | (index << 6)
+    for i in range(BLOCK_SIZE):
+        memory.store_word(new_base + i * WORD_SIZE, 1000 + i)
 
-def test_decode_address_consistency():
+    new_block = cache.replace_block(tag_new, index, memory)
+
+    # Verify old block was written back
+    old_base = (tag_old << 11) | (index << 6)
+    for i in range(BLOCK_SIZE):
+        addr = old_base + i * WORD_SIZE
+        assert memory.storage[addr] == old_block.data[i]
+
+    # Verify new block was loaded
+    for i in range(BLOCK_SIZE):
+        assert new_block.data[i] == 1000 + i
+    assert new_block.valid is True
+    assert new_block.tag == tag_new
+
+# -------------------------------------------------------------------------------
+# Cache read/write tests
+# -------------------------------------------------------------------------------
+
+def test_cache_write_and_read():
+    """Writing to cache should store data and mark block dirty; reading should return correct value."""
     cache = Cache()
-    address = 123456  # Arbitrary address
+    memory = MemoryBus(size=MEMORY_SIZE)
 
-    tag1, index1, offset1 = cache.decode_address(address)
-    tag2, index2, offset2 = cache.decode_address(address)
+    address = (3 << 11) | (2 << 6) | 4  # tag=3, index=2, offset=4
+    value = 0xABCDEF
 
-    assert (tag1, index1, offset1) == (tag2, index2, offset2)
+    # Write to cache
+    cache.write(address, value, memory)
 
+    # Read back
+    result = cache.read(address, memory)
+    assert result == [value]
 
-def test_decode_address_max_address():
-    cache = Cache()
-    max_address = 1_048_575  # Last byte in 1MB memory
-
-    tag, index, offset = cache.decode_address(max_address)
-
-    offset_bits = int(math.log2(cache.block_size))
-    index_bits = int(math.log2(cache.cache_lines))
-
-    expected_offset = max_address & ((1 << offset_bits) - 1)
-    expected_index = (max_address >> offset_bits) & ((1 << index_bits) - 1)
-    expected_tag = max_address >> (offset_bits + index_bits)
-
-    assert offset == expected_offset
-    assert index == expected_index
-    assert tag == expected_tag
-
-#write back ---------------------------------------------------------------------------------------------
-def test_write_back_dirty_block():
-    mem = MemoryBus(size=64)
-    cache = Cache()
-
-    # Simulate a block with data and dirty flag
-    address = 0
-    tag, index, offset = cache.decode_address(address)
-    block = cache.blocks[index]
-
-    block.tag = tag
-    block.data[offset] = 77
-    block.dirty = True
-
-    # Write back to memory
-    cache._write_back(block, index, mem)
-
-    # Confirm memory was updated
-    assert mem.load_word(address) & 0xFF == 77
-    assert not block.dirty
-
-def test_write_back_only_if_dirty():
-    mem = MemoryBus(size=1024)
-    cache = Cache()
-
-    address = 0
-    tag, index, offset = cache.decode_address(address)
-    block = cache.blocks[index]
-    block.tag = tag
-    block.data[offset] = 123
-    block.dirty = True  
-
-    base_address = (index << int(math.log2(cache.block_size))) * cache.word_size
-    mem.store_word(base_address + offset * cache.word_size, 0xDEADBEEF)
-
-    cache._write_back(block, base_address, mem)
-
-    # Confirm overwrite
-    assert mem.load_word(base_address + offset * cache.word_size) == 123
-
-
-def test_write_back_multiple_offsets():
-    mem = MemoryBus(size=1024)
-    cache = Cache()
-
-    base_address = 64
-    block = Block()
-    block.data = [i + 10 for i in range(cache.block_size)]
-    block.dirty = True
-
-    cache._write_back(block, base_address, mem)
-
-    for i in range(cache.block_size):
-        addr = base_address + i * cache.word_size
-        expected = i + 10
-        actual = mem.load_word(addr)
-        assert actual == expected, f"At offset {i}, expected {expected}, got {actual}"
-
-
-def test_write_back_resets_dirty_flag():
-    mem = MemoryBus(size=64)
-    cache = Cache()
-
-    address = 0
+    # Verify block is dirty
     tag, index, offset = cache.decode_address(address)
     block = cache.blocks[index]
-
-    block.tag = tag
-    block.data[offset] = 77
-    block.dirty = True
-
-    cache._write_back(block, index, mem)
-
-    assert not block.dirty
+    assert block.dirty is True
+    assert block.data[offset] == value

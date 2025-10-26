@@ -61,35 +61,7 @@ class Cache:
         """Detect cache hit or miss"""
         return block.valid and block.tag == tag
 
-    # def read(self, address: int, memory: MemoryBus) -> list[int]:
-    #     """read value from memory by address"""
-    #     tag, index, offset = self.decode_address(address)
-    #     block = self.blocks[index]
-    #     if self.hit_or_miss(block, tag):
-    #         logger.info(f"Cache hit on read at address {address}")
-    #         return block.data[offset:offset + 1]
-    #     logger.info(f"Cache miss on read at address {address}")
-    #     block = self.replace_block(tag, index, memory)
-    #     return block.data[offset:offset + 1]
 
-    # def write(self, address: int, value: int, memory: MemoryBus) -> None:
-    #     """write value into memory by address"""
-    #     tag, index, offset = self.decode_address(address)
-    #     block = self.blocks[index]
-
-    #     if self.hit_or_miss(block, tag):
-    #         # cache hit
-    #         logger.info(f"Cache hit on write at address {address}")
-    #         block.data[offset] = value
-    #         block.dirty = True
-    #     else:
-    #         #cache miss
-    #         logger.info(f"Cache miss on write at address {address}")
-    #         block = self.replace_block(tag, index, memory)
-    #         block.data[offset] = value
-    #         # mark as dirty - data written to it
-    #         block.dirty = True
-    #         logger.info(f"Value written to cache after block replacement")
     def _access_block(self, address: int, memory: MemoryBus) -> tuple[Block, int]:
         """Decode address and ensure block is present in cache."""
         tag, index, offset = self.decode_address(address)
@@ -119,14 +91,14 @@ class Cache:
         """Block Replacement algorithm"""
         #Identify block to be replaced 
         old_block = self.blocks[index]
-        old_base = (old_block.tag << 8) | (index << 3)
+        old_base = (old_block.tag << 11) | (index << 6)
 
         #Write back old block to memory if it's valid and dirty
         if old_block.valid and old_block.dirty:
             self._write_back(old_block, old_base, memory)
 
         # get new block address
-        new_base = (tag << 8) | (index << 3) # calculate new address 
+        new_base = (tag << 11) | (index << 6) # calculate new address 
         new_block = Block(tag=tag) #create new block 
 
         #load values from memory into new block
@@ -141,7 +113,7 @@ class Cache:
         logger.info("Flushing cache to memory")
         for index, block in enumerate(self.blocks):
             #Calculate the memory base address for the current block
-            base_address = (block.tag << 8) | (index << 3)
+            base_address = (block.tag << 11) | (index << 6)
             #Check if the block needs to be written back
             if block.valid and block.dirty:
                 #write block's data back to memory bus
