@@ -14,7 +14,7 @@ class CPU:
     def __init__(self) -> None:
         """Initialize CPU with registers, program counter, memory, and cache."""
         logger.info("Initializing CPU Simulator")
-        self.registers = [0] * BUS_LENGTH
+        self.registers = [0] * 32
         self.pc = 0  # Program counter
         self.load_instructions = []
         self.cache = None
@@ -44,25 +44,51 @@ class CPU:
             return [line.strip() for line in file.readlines()]
 
 
+    # def _load_instructions(self, instructions_file):
+    #     """Load instructions from file into the CPU."""
+    #     if not instructions_file:
+    #         logger.error("No instruction file provided.")
+    #         sys.exit(1)
+    #     logger.info("loading instructions")
+    #     lines = self._load_file_lines(instructions_file)
+    #     if lines is None:
+    #         logger.error("Failed to load instructions due to file read error.")
+    #         sys.exit(1)
+    #     try:
+    #         for line in lines:
+    #             self.load_instructions.append(line.split(','))
+    #     except Exception as e:
+    #         logger.error(f"Error parsing instructions: {e}")
+    #         sys.exit(1)
+    #     logger.info("Finished loading instructions.")
+
     def _load_instructions(self, instructions_file):
         """Load instructions from file into the CPU."""
         if not instructions_file:
             logger.error("No instruction file provided.")
             sys.exit(1)
+
         logger.info("loading instructions")
         lines = self._load_file_lines(instructions_file)
         if lines is None:
             logger.error("Failed to load instructions due to file read error.")
             sys.exit(1)
+
         try:
             for line in lines:
-                self.load_instructions.append(line.split(','))
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue  # skip empty or comment lines
+
+                # ✅ Normalize: replace commas with spaces, then split
+                parts = line.replace(',', ' ').split()
+                self.load_instructions.append(parts)
+
         except Exception as e:
             logger.error(f"Error parsing instructions: {e}")
             sys.exit(1)
+
         logger.info("Finished loading instructions.")
-
-
 
     def _load_memory(self, data_file):
         """Load memory initialization values from file."""
@@ -141,8 +167,31 @@ class CPU:
         arg2 = int(args[1][1:])
         arg3 = CPU._validate_immediate_value(args[2]) if imm else int(args[2][1:])    
         return arg1, arg2, arg3
+    
+    @staticmethod
+    def _parse_memory_args(args: list[str]) -> tuple[int, int, int]:
+        """
+        Parse LW/SW-style arguments: [rt, offset(rs)]
+        Returns: rt index, rs index, offset
+        """
+        if len(args) != 2:
+            raise ValueError(f"Expected 2 arguments for memory instruction, got {len(args)}: {args}")
+        
+        rt = args[0]
+        offset_expr = args[1]
 
+        if not offset_expr.endswith(')') or '(' not in offset_expr:
+            raise ValueError(f"Malformed memory operand: {offset_expr}")
 
+        try:
+            offset_str, rs_str = offset_expr.replace(')', '').split('(')
+            rt_idx = int(rt[1:])
+            rs_idx = int(rs_str[1:])
+            offset = int(offset_str)
+        except Exception as e:
+            raise ValueError(f"Failed to parse memory args: {args}") from e
+
+        return rt_idx, rs_idx, offset
 
     #Instruction handlers 
     def execute_arithmetic(self, args: list[str], op_func, op_name: str, immediate: bool = False) -> None:
@@ -189,33 +238,34 @@ class CPU:
         if not target.isdigit():
             raise Exception("Jump target must be a number")
 
-        target_address = int(target) * WORD_SIZE
-        if not (0 <= target_address < len(self.load_instructions)*WORD_SIZE):
-            raise Exception("Jump target out of instruction range")
-        # Handle JAL instruction
+        target_index = int(target)
+        if not (0 <= target_index < len(self.load_instructions)):
+            raise Exception(f"Jump target {target_index} out of instruction range (max index: {len(self.load_instructions) - 1})")
+
         if link:
-            self.registers[7] = self.pc + WORD_SIZE  # Save return address in R7
+            self.registers[7] = self.pc + WORD_SIZE
             logger.info(f"JAL executed: Return address saved in R7: {self.registers[7]}")
+
+        target_address = target_index * WORD_SIZE
         self.pc = target_address
-        logger.info(f"{'JAL' if link else 'J'} executed: Jumped to instruction index {target_address}")
+        logger.info(f"{'JAL' if link else 'J'} executed: Jumped to instruction index {target_index}")
+
 
     def execute_memory_action(self, args: list[str], code: str) -> None:
         """Execute load word (LW) and store word (SW) instructions."""
-        rt, offset_expr = args
-        rt_idx = int(rt[1:])
-        # calculate offset and rs index
-        offset_str, rs_str = offset_expr.replace(')', '').split('(')
-        rs_idx = int(rs_str[1:])
-        offset = int(offset_str)
+        rt_idx, rs_idx, offset = self._parse_memory_args(args)
         self._validate_offset(offset, WORD_SIZE)
-        if not self._valid_registers(rt_idx, rs_idx):
+        if not self._valid_registers(rt_idx, rs_idx, allow_r0=True):
             raise Exception(f"Invalid register index: src={rs_idx}, rt={rt_idx}")
         # select between load and store
         if code == 'LW':
-            self.registers[rt_idx] = self.memory.load_word(self.registers[rs_idx] + offset)
+            address = self.registers[rs_idx] + offset
+            self.registers[rt_idx] = self.memory.load_word(address)
         elif code == 'SW':
             address = self.registers[rs_idx] + offset
             self.memory.store_word(address, self.registers[rt_idx])
+        else:
+            raise Exception(f"Unsupported memory operation: {code}")
 
 
     def execute_cache(self, code: str) -> None:
@@ -288,9 +338,17 @@ class CPU:
     def execute_instructions(self) -> None:
         """Execute loaded instructions sequentially."""
         logger.info("Starting instruction execution")
+
         while not self.halted and self.pc < len(self.load_instructions) * WORD_SIZE:
             current_pc = self.pc
+            instr_index = self.pc // WORD_SIZE
+            instr = self.load_instructions[instr_index]
             opcode, *args = self.load_instructions[self.pc // WORD_SIZE]
+
+
+            print(f"PC: {self.pc} | Instruction: {instr}")
+            print(f"Registers before: {self.registers}")
+
             try:
                 logger.info(f"Executing {opcode} with args: {args}")
                 self.dispatch_instruction(opcode, args)
@@ -298,8 +356,14 @@ class CPU:
                 self.registers[0] = 0
                 if self.pc == current_pc:
                     self.pc += WORD_SIZE
+                
+                print(f"Registers after: {self.registers}\n")
+
             except Exception as e:
+                # in example - jump to instrction 8 cant happen (only 5 instructions) so system should halt. 
                 logger.error(f"Error executing {opcode} instruction at PC {self.pc}: {e}")
                 self.halted = True
+                logger.info("HALT executed due to error")
                 return
-        logger.info(f"Finished {opcode} instructions execution.")
+        logger.info(f".")
+        

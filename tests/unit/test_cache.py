@@ -4,20 +4,21 @@ from cpu.memory_bus import MemoryBus
 from utils.constants import MEMORY_SIZE, WORD_SIZE, BLOCK_SIZE
 
 # -------------------------------------------------------------------------------
-# Cache flush tests
+# Cache flush test
 # -------------------------------------------------------------------------------
 
 def test_flush_writes_back_dirty_blocks_and_clears_dirty_flag():
-    """Flush should write dirty blocks to memory and clear dirty flags."""
     cache = Cache()
     memory = MemoryBus(size=MEMORY_SIZE)
 
-    # Populate cache with dirty blocks
+    # Populate cache with dirty blocks and save expected data
+    expected_data = []
     for index in range(len(cache.blocks)):
         block = Block(tag=index)
         block.valid = True
         block.dirty = True
         block.data = [index * 100 + i for i in range(cache.block_size)]
+        expected_data.append(block.data[:])  # Save a copy
         cache.blocks[index] = block
 
     # Flush cache
@@ -26,13 +27,16 @@ def test_flush_writes_back_dirty_blocks_and_clears_dirty_flag():
     # Verify memory contents and dirty flags
     for index, block in enumerate(cache.blocks):
         base_address = (block.tag << 11) | (index << 6)
-        for offset in range(cache.block_size):
+        for offset, expected in enumerate(expected_data[index]):
             addr = base_address + offset * WORD_SIZE
-            assert memory.storage[addr] == block.data[offset]
+            actual = memory.storage[addr]
+            assert actual == expected, f"Memory at {addr} = {actual}, expected {expected}"
         assert block.dirty is False
 
+
+
 # -------------------------------------------------------------------------------
-# Cache replacement tests
+# Cache replacement test
 # -------------------------------------------------------------------------------
 
 def test_replace_block_writes_back_and_loads_new_data():

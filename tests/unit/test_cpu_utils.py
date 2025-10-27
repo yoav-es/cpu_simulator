@@ -202,6 +202,16 @@ def test_validate_offset_out_of_range():
     with pytest.raises(Exception):
         CPU._validate_offset(INT16_MAX + 1, 4)
 
+# ------------------------------------------------------------------------------
+# Register Validation tests
+# ------------------------------------------------------------------------------
+
+def test_valid_registers_allows_r0_when_flag_set():
+    assert CPU._valid_registers(0, 5, allow_r0=True) is True
+
+def test_valid_registers_rejects_r0_by_default():
+    assert CPU._valid_registers(0, 5) is False
+
 # -------------------------------------------------------------------------------
 # _validate_immediate_value tests
 # -------------------------------------------------------------------------------

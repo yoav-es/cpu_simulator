@@ -99,7 +99,7 @@ def test_execute_jump_to_last_instruction():
 def test_execute_jump_out_of_bounds():
     cpu = CPU()
     cpu.load_instructions = [["NOP"]] * 5  # 5 instructions = 20 bytes
-    with pytest.raises(Exception, match="Jump target out of instruction range"):
+    with pytest.raises(Exception, match=r"Jump target \d+ out of instruction range"):
         cpu.execute_jump(["5"])  # 5 * 4 = 20, which is just past the end
 # -------------------------------------------------------------------------------
 # execute_memory_action tests

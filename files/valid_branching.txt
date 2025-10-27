@@ -1,0 +1,5 @@
+LW R1, 0
+LOAD R2, 1
+LW R1, R2, 5
+LW R3, 2
+HALT

@@ -23,10 +23,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger("CPUSimulator")
 
+import argparse
+import sys
+import logging
+
+logger = logging.getLogger(__name__)
+
 def main():
     parser = argparse.ArgumentParser(description="Run the CPU Simulator.")
-    parser.add_argument('--instructions', type=str, required=True, help='Path to instruction input file')
-    parser.add_argument('--memory', type=str, required=True, help='Path to memory initialization file')
+    parser.add_argument('--instructions', type=str, required=True,
+                        help='Path to instruction input file')
+    parser.add_argument('--memory', type=str, required=True,
+                        help='Path to memory initialization file')
     args = parser.parse_args()
 
     try:
@@ -38,10 +46,11 @@ def main():
         logger.info("Starting instruction execution...")
         cpu_sim.execute_instructions()
         logger.info("Simulation complete.")
+        sys.exit(0)   # normal termination
     except Exception as e:
         logger.error(f"Simulation failed: {e}")
+        sys.exit(1)   # abnormal termination
 
 if __name__ == "__main__":
     main()
-
     # python main.py --instructions files/instruction_input.txt --memory files/data_input.txt

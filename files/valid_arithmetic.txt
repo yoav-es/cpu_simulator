@@ -1,0 +1,5 @@
+LW R1, 0(R4)
+LW R2, 4(R4)
+ADD R3, R1, R2
+SW R3, 0(R4)
+HALT

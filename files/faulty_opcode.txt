@@ -1,0 +1,3 @@
+LW R1, 0(R2)
+FOO R3, R1, R1
+HALT
