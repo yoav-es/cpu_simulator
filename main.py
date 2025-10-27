@@ -15,6 +15,7 @@ Usage:
 
 import argparse
 import logging
+import sys
 from cpu.cpu import CPU
 
 logging.basicConfig(
@@ -23,11 +24,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger("CPUSimulator")
 
-import argparse
-import sys
-import logging
-
-logger = logging.getLogger(__name__)
 
 def main():
     parser = argparse.ArgumentParser(description="Run the CPU Simulator.")
@@ -46,10 +42,11 @@ def main():
         logger.info("Starting instruction execution...")
         cpu_sim.execute_instructions()
         logger.info("Simulation complete.")
-        sys.exit(0)   # normal termination
+        sys.exit(0)
     except Exception as e:
         logger.error(f"Simulation failed: {e}")
-        sys.exit(1)   # abnormal termination
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

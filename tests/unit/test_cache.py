@@ -1,4 +1,3 @@
-import pytest
 from cpu.cache import Cache, Block
 from cpu.memory_bus import MemoryBus
 from utils.constants import MEMORY_SIZE, WORD_SIZE, BLOCK_SIZE
