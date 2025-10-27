@@ -20,8 +20,9 @@ This project simulates a simplified CPU architecture in Python, modeling core co
 - Hit/miss detection and block replacement
 - Write-back policy with flush support
 
-## Project Structure
+## 📁 Project Structure
 
+```
 cpu-simulator/
 ├── src/
 │   ├── cpu.py
@@ -34,6 +35,7 @@ cpu-simulator/
 ├── Dockerfile
 ├── README.md
 └── main.py
+```
 
 ---
 
