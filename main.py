@@ -53,4 +53,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    # python main.py --instructions files/instruction_input.txt --memory files/data_input.txt

@@ -20,6 +20,21 @@ This project simulates a simplified CPU architecture in Python, modeling core co
 - Hit/miss detection and block replacement
 - Write-back policy with flush support
 
+## Project Structure
+
+cpu-simulator/
+├── src/
+│   ├── cpu.py
+│   ├── memory.py
+│   ├── cache.py
+│   └── cli.py
+├── tests/
+│   └── test_cpu.py
+├── requirements.txt
+├── Dockerfile
+├── README.md
+└── main.py
+
 ---
 
 ## 🧾 Instruction Set Architecture (ISA)
