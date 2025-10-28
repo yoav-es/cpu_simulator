@@ -108,3 +108,29 @@ cpu-simulator/
    SW R3, 0(R4) 
    HALT
 ```
+
+To run the CPU simulator using Docker, first build the image from the project root:
+
+```bash
+docker build -t cpu_simulator .
+```
+
+This creates a Docker image named `cpu_simulator`. You can then run the simulator with command-line arguments:
+
+```bash
+docker run --rm cpu_simulator --instructions files/instruction_input.txt --memory files/data_input.txt
+```
+
+Make sure the input files are either included in the image or mounted from your host system. To mount files from your local `files/` directory:
+
+```bash
+docker run --rm -v ${PWD}/files:/cpu_simulator/files cpu_simulator --instructions files/instruction_input.txt --memory files/data_input.txt
+```
+
+To run tests using `pytest`:
+
+```bash
+docker run --rm cpu_simulator pytest
+```
+
+This setup allows you to use the simulator as a CLI tool inside a container, passing arguments just as you would locally.
