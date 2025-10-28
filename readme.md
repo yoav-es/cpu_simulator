@@ -108,6 +108,9 @@ cpu-simulator/
    SW R3, 0(R4) 
    HALT
 ```
+---
+## 🐳 Docker Usage
+
 
 To run the CPU simulator using Docker, first build the image from the project root:
 
@@ -132,42 +135,59 @@ To run tests using `pytest`:
 ```bash
 docker run --rm cpu_simulator pytest
 ```
+---
 
-To simplify development and testing, this project includes a Makefile that automates common tasks. You can use it to build the Docker image, run the simulator, execute tests, and clean up. To use it, make sure you have `make` installed on your system. On Windows, you can install it via Chocolatey (`choco install make`), use Git Bash, or run it from WSL.
+## 🛠️ Makefile Usage
 
-Build the Docker image:
+
+This project includes a Makefile to simplify common tasks like building the Docker image, running the simulator, and executing tests. To use it, make sure you have `make` installed. On Windows, you can install it via Chocolatey (`choco install make`), use Git Bash, or run it from WSL.
+
+To build the Docker image:
 
 ```bash
 make build
 ```
 
-Run the simulator inside Docker with default arguments:
+To run the simulator with default input files:
 
 ```bash
 make run
 ```
 
-Run the simulator with input files mounted from your local `files/` directory:
+To run the simulator with custom input files, pass them as arguments:
+
+```bash
+make run INSTRUCTIONS=files/custom_instructions.txt MEMORY=files/custom_memory.txt
+```
+
+To mount input files from your local `files/` directory:
 
 ```bash
 make run-mounted
 ```
 
-Run the simulator locally with Python:
+To run the simulator locally with Python:
 
 ```bash
 make local-run
 ```
 
-Run tests using pytest inside Docker:
+To run tests using pytest inside Docker:
 
 ```bash
 make test
 ```
 
-Remove the Docker image to clean up:
+To remove the Docker image:
 
 ```bash
 make clean
 ```
 
+You can override any variable defined in the Makefile by passing it on the command line. For example, to use a different instruction file:
+
+```bash
+make run INSTRUCTIONS=files/alt_instructions.txt
+```
+
+This makes it easy to switch inputs or configurations without editing the Makefile itself.
