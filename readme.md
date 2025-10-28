@@ -190,4 +190,45 @@ You can override any variable defined in the Makefile by passing it on the comma
 make run INSTRUCTIONS=files/alt_instructions.txt
 ```
 
-This makes it easy to switch inputs or configurations without editing the Makefile itself.
+---
+## 🐍 Local Development with Python Virtual Environment
+
+If you prefer to run the simulator locally without Docker, you can use a Python virtual environment to isolate dependencies.
+
+### ✅ Setup Instructions
+
+1. Create a virtual environment using Python 3.13.9:
+
+   ```bash
+   python3.13 -m venv venv
+   ```
+
+2. Activate the environment:
+
+   - On macOS/Linux:
+     ```bash
+     source venv/bin/activate
+     ```
+   - On Windows:
+     ```bash
+     venv\Scripts\activate
+     ```
+
+3. Install dependencies:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. Run the simulator with arguments:
+
+   ```bash
+   python main.py --instructions files/instruction_input.txt --memory files/data_input.txt
+   ```
+
+5. Run tests:
+
+   ```bash
+   pytest
+   ```
+
