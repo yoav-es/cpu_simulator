@@ -133,4 +133,41 @@ To run tests using `pytest`:
 docker run --rm cpu_simulator pytest
 ```
 
-This setup allows you to use the simulator as a CLI tool inside a container, passing arguments just as you would locally.
+To simplify development and testing, this project includes a Makefile that automates common tasks. You can use it to build the Docker image, run the simulator, execute tests, and clean up. To use it, make sure you have `make` installed on your system. On Windows, you can install it via Chocolatey (`choco install make`), use Git Bash, or run it from WSL.
+
+Build the Docker image:
+
+```bash
+make build
+```
+
+Run the simulator inside Docker with default arguments:
+
+```bash
+make run
+```
+
+Run the simulator with input files mounted from your local `files/` directory:
+
+```bash
+make run-mounted
+```
+
+Run the simulator locally with Python:
+
+```bash
+make local-run
+```
+
+Run tests using pytest inside Docker:
+
+```bash
+make test
+```
+
+Remove the Docker image to clean up:
+
+```bash
+make clean
+```
+
