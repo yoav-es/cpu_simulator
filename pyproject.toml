@@ -1,0 +1,32 @@
+# pyproject.toml
+
+[project]
+name = "cpu_simulator"
+version = "1.1.0"
+description = "A Python-based simulator for a simplified MIPS-inspired CPU architecture with memory bus and cache."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pytest"
+    # stdlib modules like sys, operator, typing, argparse are built-in and not listed here
+]
+
+[tool.pytest.ini_options]
+# Ensures tests can import modules without setting PYTHONPATH manually
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+
+[tool.isort]
+profile = "black"
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503"]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
