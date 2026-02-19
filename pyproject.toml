@@ -14,7 +14,6 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "black>=23.0",
-    "flake8>=6.0",
 ]
 
 [tool.pytest.ini_options]
@@ -28,10 +27,6 @@ target-version = ["py310"]
 
 [tool.isort]
 profile = "black"
-
-[tool.flake8]
-max-line-length = 88
-extend-ignore = ["E203", "W503"]
 
 [tool.setuptools]
 packages = ["cpu", "utils"]

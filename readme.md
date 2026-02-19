@@ -49,7 +49,7 @@ The following improvements were implemented to enhance modularity, testability, 
 - Removed duplicate MemoryBus tests from `test_cpu_utils.py`
 
 ### CI/CD
-- black and flake8 lint steps in GitHub Actions
+- black lint in GitHub Actions
 - Coverage reporting via `pytest --cov=cpu --cov=utils`
 - Workflows trigger on both `main` and `master` branches
 
