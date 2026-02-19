@@ -6,6 +6,7 @@ from utils.constants import MEMORY_SIZE, WORD_SIZE, BLOCK_SIZE
 # Cache flush test
 # -------------------------------------------------------------------------------
 
+
 def test_flush_writes_back_dirty_blocks_and_clears_dirty_flag():
     cache = Cache()
     memory = MemoryBus(size=MEMORY_SIZE)
@@ -25,18 +26,20 @@ def test_flush_writes_back_dirty_blocks_and_clears_dirty_flag():
 
     # Verify memory contents and dirty flags
     for index, block in enumerate(cache.blocks):
-        base_address = (block.tag << 11) | (index << 6)
+        base_address = cache._block_base_address(block.tag, index)
         for offset, expected in enumerate(expected_data[index]):
             addr = base_address + offset * WORD_SIZE
             actual = memory.storage[addr]
-            assert actual == expected, f"Memory at {addr} = {actual}, expected {expected}"
+            assert (
+                actual == expected
+            ), f"Memory at {addr} = {actual}, expected {expected}"
         assert block.dirty is False
-
 
 
 # -------------------------------------------------------------------------------
 # Cache replacement test
 # -------------------------------------------------------------------------------
+
 
 def test_replace_block_writes_back_and_loads_new_data():
     """Replacing a block should write back dirty data and load new block from memory."""
@@ -55,14 +58,14 @@ def test_replace_block_writes_back_and_loads_new_data():
     cache.blocks[index] = old_block
 
     # Replace with new block
-    new_base = (tag_new << 11) | (index << 6)
+    new_base = cache._block_base_address(tag_new, index)
     for i in range(BLOCK_SIZE):
         memory.store_word(new_base + i * WORD_SIZE, 1000 + i)
 
     new_block = cache.replace_block(tag_new, index, memory)
 
     # Verify old block was written back
-    old_base = (tag_old << 11) | (index << 6)
+    old_base = cache._block_base_address(tag_old, index)
     for i in range(BLOCK_SIZE):
         addr = old_base + i * WORD_SIZE
         assert memory.storage[addr] == old_block.data[i]
@@ -73,16 +76,19 @@ def test_replace_block_writes_back_and_loads_new_data():
     assert new_block.valid is True
     assert new_block.tag == tag_new
 
+
 # -------------------------------------------------------------------------------
 # Cache read/write tests
 # -------------------------------------------------------------------------------
+
 
 def test_cache_write_and_read():
     """Writing to cache should store data and mark block dirty; reading should return correct value."""
     cache = Cache()
     memory = MemoryBus(size=MEMORY_SIZE)
 
-    address = (3 << 11) | (2 << 6) | 4  # tag=3, index=2, offset=4
+    word_addr = (3 << 10) | (2 << 4) | 4  # tag=3, index=2, offset=4
+    address = word_addr * WORD_SIZE  # byte address for cache
     value = 0xABCDEF
 
     # Write to cache

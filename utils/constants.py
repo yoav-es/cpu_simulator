@@ -1,8 +1,11 @@
+"""Architecture constants for the CPU simulator."""
+
 WORD_SIZE = 4
 CACHE_SIZE = 4096
 BLOCK_SIZE = 16
 NUM_REGISTERS = 32
-MEMORY_SIZE = 1024 * 1024 
+MEMORY_SIZE = 1024 * 1024
 BUS_LENGTH = 32
 INT16_MIN = -32768
 INT16_MAX = 32767
+LINK_REGISTER = 7  # R7 used by JAL for return address

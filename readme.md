@@ -23,20 +23,62 @@ This project simulates a simplified CPU architecture in Python, modeling core co
 
 ---
 
+## Recent Improvements
+
+The following improvements were implemented to enhance modularity, testability, and adherence to PEP style:
+
+### Functionality
+- **Cache integration**: LW and SW now route through the cache when enabled via `CACHE 1`; previously memory bypassed the cache entirely
+- **Cache address formula**: Fixed block base-address calculation; addresses now derive correctly from `offset_bits` and `index_bits`
+- **Flush on HALT**: Dirty cache blocks are flushed to memory when execution halts
+
+### CLI
+- **`--verbose` / `-v`**: Print PC and registers for each instruction (default is quiet)
+- **`--output json` / `-o json`**: Output final state (halted, pc, registers) as JSON for programmatic use
+
+### Code Quality
+- Replaced `sys.exit` with exceptions; error handling centralized in `main.py`
+- Raised `ValueError` instead of generic `Exception` for invalid offsets
+- Removed dead code and duplicate tests
+- Introduced `LINK_REGISTER` constant; improved type hints and docstrings
+
+### Testing
+- 77 unit and integration tests
+- ~93% code coverage (`cpu`, `cache`, `memory_bus`, `utils`)
+- New cache integration test for LW/SW with cache enabled
+- Removed duplicate MemoryBus tests from `test_cpu_utils.py`
+
+### CI/CD
+- black and flake8 lint steps in GitHub Actions
+- Coverage reporting via `pytest --cov=cpu --cov=utils`
+- Workflows trigger on both `main` and `master` branches
+
+### Documentation
+- Project structure aligned with actual layout
+- Memory file format clarified (binary addresses)
+- NOP added to ISA table
+- Direct commands documented (Makefile no longer used)
+
+---
+
 ## Project Structure
 
-cpu-simulator/  
-&nbsp;&nbsp;src/  
-&nbsp;&nbsp;&nbsp;&nbsp;cpu.py  
-&nbsp;&nbsp;&nbsp;&nbsp;memory.py  
-&nbsp;&nbsp;&nbsp;&nbsp;cache.py  
-&nbsp;&nbsp;&nbsp;&nbsp;cli.py  
-&nbsp;&nbsp;tests/  
-&nbsp;&nbsp;&nbsp;&nbsp;test_cpu.py  
-&nbsp;&nbsp;requirements.txt  
-&nbsp;&nbsp;Dockerfile  
-&nbsp;&nbsp;README.md  
-&nbsp;&nbsp;main.py  
+```
+cpu_simulator/
+  cpu/
+    cpu.py          # CPU core and instruction execution
+    memory_bus.py   # Memory storage
+    cache.py        # Cache with write-back policy
+  utils/
+    constants.py    # Architecture constants
+  main.py           # Entry point and CLI
+  tests/
+    unit/           # Unit tests
+    integration/    # Integration tests
+  files/            # Sample instruction and memory files
+  pyproject.toml    # Project configuration
+  Dockerfile
+```
 
 ---
 
@@ -55,146 +97,134 @@ cpu-simulator/
 | `LW`        | Rt, offset(Rs)   | `Rt ← MEM[Rs + offset]`                       |
 | `SW`        | Rt, offset(Rs)   | `MEM[Rs + offset] ← Rt`                       |
 | `CACHE`     | Code             | `0 = off`, `1 = on`, `2 = flush`              |
+| `NOP`       | —                | No operation                                  |
 | `HALT`      | —                | Terminate execution                           |
 
 ---
 
-## How It Works
+## How to Run
 
-### 1. Input Files
-- **Instruction file**: Contains ISA commands (one per line)
-- **Memory file**: Initializes memory with address-value pairs (binary or decimal)
+### Prerequisites
 
-### 2. Execution Flow
-- CPU loads instructions and memory
-- Instructions are parsed and executed sequentially
-- Cache intercepts memory access and manages block-level data
-- Console output logs each stage of execution
+- Python 3.10 or higher
+- pip
 
-### 3. CLI Interface
-- Uses `argparse` for command-line arguments
-- Optional: wrap with `click` for enhanced UX
-- To run the simulator with instruction and memory files:
+### Install
 
-    python main.py --instructions files/instruction_input.txt --memory files/data_input.txt
+```bash
+pip install -e .
+```
+
+Or install dependencies from `requirements.txt`:
+
+```bash
+pip install -r requirements.txt
+```
+
+### Run the Simulator
+
+```bash
+python main.py --instructions files/instruction_input.txt --memory files/data_input.txt
+```
+
+With verbose output (PC and registers for each instruction):
+
+```bash
+python main.py --instructions files/instruction_input.txt --memory files/data_input.txt --verbose
+```
+
+Output final state as JSON:
+
+```bash
+python main.py --instructions files/instruction_input.txt --memory files/data_input.txt --output json
+```
+
+### Run Tests
+
+```bash
+pytest
+```
+
+With coverage:
+
+```bash
+pytest --cov=cpu --cov=utils
+```
 
 ---
 
-## Testing
+## Docker
 
-- Integration and unit tests using `pytest`
-- Test coverage includes CPU execution, cache behavior, and memory access
-- Example test: `test_valid_arithmetic_program` validates register and memory state after arithmetic operations
+Build the image:
+
+```bash
+docker build -t cpu_simulator .
+```
+
+Run the simulator:
+
+```bash
+docker run --rm cpu_simulator --instructions files/instruction_input.txt --memory files/data_input.txt
+```
+
+To mount local files:
+
+```bash
+docker run --rm -v ${PWD}/files:/cpu_simulator/files cpu_simulator --instructions files/instruction_input.txt --memory files/data_input.txt
+```
+
+Run tests:
+
+```bash
+docker run --rm cpu_simulator pytest
+```
 
 ---
 
-## File Format Notes
+## File Formats
 
 ### Memory File
-- Format: `address,value`
-- Example (binary addresses):
 
-    00000000,7  
-    00000100,8
+- Format: `address,value` (one pair per line)
+- Address: **binary string** (e.g. `00000000`, `00000100`)
+- Value: decimal integer
+
+Example:
+
+```
+00000000,7
+00000100,8
+```
 
 ### Instruction File
-- Format: one instruction per line
-- Example:
 
-    LW R1, 0(R4)  
-    LW R2, 4(R4)  
-    ADD R3, R1, R2  
-    SW R3, 0(R4)  
-    HALT  
+- One instruction per line
+- Use spaces or commas to separate operands
+- Lines starting with `#` and empty lines are ignored
 
----
+Example:
 
-## Docker Usage
-
-To run the CPU simulator using Docker, first build the image from the project root:
-
-    docker build -t cpu_simulator .
-
-This creates a Docker image named `cpu_simulator`. You can then run the simulator with command-line arguments:
-
-    docker run --rm cpu_simulator --instructions files/instruction_input.txt --memory files/data_input.txt
-
-Make sure the input files are either included in the image or mounted from your host system. To mount files from your local `files/` directory:
-
-    docker run --rm -v ${PWD}/files:/cpu_simulator/files cpu_simulator --instructions files/instruction_input.txt --memory files/data_input.txt
-
-To run tests using `pytest`:
-
-    docker run --rm cpu_simulator pytest
+```
+LW R1, 0(R4)
+LW R2, 4(R4)
+ADD R3, R1, R2
+SW R3, 0(R4)
+HALT
+```
 
 ---
 
-## Makefile Usage
+## Local Development
 
-This project includes a Makefile to simplify common tasks like building the Docker image, running the simulator, and executing tests. To use it, make sure you have `make` installed. On Windows, you can install it via Chocolatey (`choco install make`), use Git Bash, or run it from WSL.
+1. Create a virtual environment:
 
-To build the Docker image:
+       python -m venv venv
 
-    make build
+2. Activate it:
 
-To run the simulator with default input files:
+   - Windows: `venv\Scripts\activate`
+   - macOS/Linux: `source venv/bin/activate`
 
-    make run
+3. Install: `pip install -e .`
 
-To run the simulator with custom input files, pass them as arguments:
-
-    make run INSTRUCTIONS=files/custom_instructions.txt MEMORY=files/custom_memory.txt
-
-To mount input files from your local `files/` directory:
-
-    make run-mounted
-
-To run the simulator locally with Python:
-
-    make local-run
-
-To run tests using pytest inside Docker:
-
-    make test
-
-To remove the Docker image:
-
-    make clean
-
-You can override any variable defined in the Makefile by passing it on the command line. For example, to use a different instruction file:
-
-    make run INSTRUCTIONS=files/alt_instructions.txt
-
----
-
-## Local Development with Python Virtual Environment
-
-If you prefer to run the simulator locally without Docker, you can use a Python virtual environment to isolate dependencies.
-
-### Setup Instructions
-
-1. Create a virtual environment using Python 3.13.9:
-
-       python3.13 -m venv venv
-
-2. Activate the environment:
-
-   - On macOS/Linux:
-
-         source venv/bin/activate
-
-   - On Windows:
-
-         venv\Scripts\activate
-
-3. Install dependencies:
-
-       pip install -r requirements.txt
-
-4. Run the simulator with arguments:
-
-       python main.py --instructions files/instruction_input.txt --memory files/data_input.txt
-
-5. Run tests:
-
-       pytest
+4. Run tests: `pytest`

@@ -5,6 +5,7 @@ from cpu.memory_bus import MemoryBus
 # Address validation tests
 # ------------------------------------------------------------------------------
 
+
 def test_validate_address_valid():
     """Test that valid addresses within range do not raise exceptions."""
     mem = MemoryBus(size=10)
@@ -22,7 +23,7 @@ def test_validate_address_type_error():
 
     # String is not a valid address
     with pytest.raises(TypeError):
-        mem._validate_address('a')  # type: ignore
+        mem._validate_address("a")  # type: ignore
 
     # Float is not a valid address
     with pytest.raises(TypeError):
@@ -45,6 +46,7 @@ def test_validate_address_value_error():
 # ------------------------------------------------------------------------------
 # Store and load word tests
 # ------------------------------------------------------------------------------
+
 
 def test_store_and_load_word():
     """Test storing and loading 32-bit words at valid addresses."""
@@ -111,4 +113,3 @@ def test_load_word_address_too_low():
 
     with pytest.raises(ValueError):
         mem.load_word(-4)
-

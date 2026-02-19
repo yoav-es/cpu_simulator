@@ -1,13 +1,15 @@
-#imports
+# imports
 import logging
 from utils.constants import MEMORY_SIZE, WORD_SIZE
 from typing import Optional
+
 logger = logging.getLogger(__name__)
 logger.info("Memory module initialized")
 
 
 class MemoryBus:
     """class memory bus"""
+
     def __init__(self, size=MEMORY_SIZE) -> None:
         # initialize values for memory bus
         logger.info("Initializing memory")
@@ -27,15 +29,16 @@ class MemoryBus:
 
     def _validate_address(self, address: int) -> None:
         """Address Validation"""
-        logger.info(f'validating {address}')
-        
+        logger.info(f"validating {address}")
+
         if address is None:
             raise TypeError("Address cannot be None")
         if not isinstance(address, int):
             raise TypeError("Address must be an integer")
         if address not in self.address_range:
-            raise ValueError(f"Address {address} out of range (0 to {self.memory_size - 1})")
-
+            raise ValueError(
+                f"Address {address} out of range (0 to {self.memory_size - 1})"
+            )
 
     def _access_memory(self, address: int, value: Optional[int] = None) -> int:
         """Memory access function: handles both read and write operations"""
@@ -51,7 +54,7 @@ class MemoryBus:
                 # Store the masked value at the given address
                 self.storage[address] = masked_value
                 # Return the stored value
-                return masked_value  
+                return masked_value
         except (TypeError, ValueError) as e:
             # Handle and log any address validation or type errors
             logger.error(f"Memory access error at address {address}: {e}")
