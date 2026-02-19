@@ -4,7 +4,7 @@
 name = "cpu_simulator"
 version = "1.2.0"
 description = "A Python-based simulator for a simplified MIPS-inspired CPU architecture with memory bus and cache."
-readme = "README.md"
+readme = "readme.md"
 requires-python = ">=3.10"
 dependencies = [
     "pytest>=7.0",
@@ -32,6 +32,9 @@ profile = "black"
 [tool.flake8]
 max-line-length = 88
 extend-ignore = ["E203", "W503"]
+
+[tool.setuptools.packages.find]
+include = ["cpu*", "utils*"]
 
 [build-system]
 requires = ["setuptools", "wheel"]
