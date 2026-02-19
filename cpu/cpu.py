@@ -144,9 +144,7 @@ class CPU:
         """Parse instruction arguments and return register indices and immediate value if applicable."""
         arg1 = int(args[0][1:])
         arg2 = int(args[1][1:])
-        arg3 = (
-            CPU._validate_immediate_value(args[2]) if imm else int(args[2][1:])
-        )
+        arg3 = CPU._validate_immediate_value(args[2]) if imm else int(args[2][1:])
         return arg1, arg2, arg3
 
     @staticmethod
