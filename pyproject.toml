@@ -2,7 +2,7 @@
 
 [project]
 name = "cpu_simulator"
-version = "1.2.0"
+version = "1.2.1"
 description = "A Python-based simulator for a simplified MIPS-inspired CPU architecture with memory bus and cache."
 readme = "readme.md"
 requires-python = ">=3.10"

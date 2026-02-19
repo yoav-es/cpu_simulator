@@ -359,4 +359,4 @@ class CPU:
                 self.halted = True
                 logger.info("HALT executed due to error")
                 return
-        logger.info(f".")
+        logger.info(".")

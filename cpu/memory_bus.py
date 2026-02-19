@@ -1,6 +1,6 @@
 # imports
 import logging
-from utils.constants import MEMORY_SIZE, WORD_SIZE
+from utils.constants import MEMORY_SIZE
 from typing import Optional
 
 logger = logging.getLogger(__name__)
