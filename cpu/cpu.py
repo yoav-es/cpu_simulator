@@ -130,7 +130,10 @@ class CPU:
             expected_arg_count = self.instruction_set[opcode]["args"]
             if len(args) != expected_arg_count:
                 logger.warning(
-                    f"Incorrect number of arguments for {opcode}. Expected {expected_arg_count}, got {len(args)}"
+                    "Incorrect number of arguments for %s. Expected %s, got %s",
+                    opcode,
+                    expected_arg_count,
+                    len(args),
                 )
                 continue
             logger.info(f"Validated {opcode} with args: {args}")
@@ -141,7 +144,9 @@ class CPU:
         """Parse instruction arguments and return register indices and immediate value if applicable."""
         arg1 = int(args[0][1:])
         arg2 = int(args[1][1:])
-        arg3 = CPU._validate_immediate_value(args[2]) if imm else int(args[2][1:])
+        arg3 = (
+            CPU._validate_immediate_value(args[2]) if imm else int(args[2][1:])
+        )
         return arg1, arg2, arg3
 
     @staticmethod
@@ -199,7 +204,11 @@ class CPU:
 
         self.registers[dest_idx] = int(self.registers[src_idx] < self.registers[rt_idx])
         logger.info(
-            f"SLT executed: R{dest_idx} = (R{src_idx} < R{rt_idx}) → {self.registers[dest_idx]}"
+            "SLT executed: R%s = (R%s < R%s) → %s",
+            dest_idx,
+            src_idx,
+            rt_idx,
+            self.registers[dest_idx],
         )
 
     def execute_bne(self, args: list[str]) -> None:
@@ -224,7 +233,8 @@ class CPU:
         target_index = int(target)
         if not (0 <= target_index < len(self.load_instructions)):
             raise Exception(
-                f"Jump target {target_index} out of instruction range (max index: {len(self.load_instructions) - 1})"
+                f"Jump target {target_index} out of instruction range "
+                f"(max index: {len(self.load_instructions) - 1})"
             )
 
         if link:
@@ -236,7 +246,9 @@ class CPU:
         target_address = target_index * WORD_SIZE
         self.pc = target_address
         logger.info(
-            f"{'JAL' if link else 'J'} executed: Jumped to instruction index {target_index}"
+            "%s executed: Jumped to instruction index %s",
+            "JAL" if link else "J",
+            target_index,
         )
 
     def execute_memory_action(self, args: list[str], code: str) -> None:
@@ -261,7 +273,7 @@ class CPU:
             raise Exception(f"Unsupported memory operation: {code}")
 
     def execute_cache(self, code: str) -> None:
-        """Execute CACHE instruction to manage cache operations. CAN be disable, enable, or flush the cache."""
+        """Execute CACHE instruction: disable, enable, or flush the cache."""
         if not code.isdigit() or int(code) not in range(0, 3):
             raise Exception("Invalid CACHE operation code")
         int_code = int(code)
@@ -352,9 +364,12 @@ class CPU:
                     logger.info("Registers after: %s", self.registers)
 
             except Exception as e:
-                # in example - jump to instrction 8 cant happen (only 5 instructions) so system should halt.
+                # Jump to invalid instruction index halts execution.
                 logger.error(
-                    f"Error executing {opcode} instruction at PC {self.pc}: {e}"
+                    "Error executing %s instruction at PC %s: %s",
+                    opcode,
+                    self.pc,
+                    e,
                 )
                 self.halted = True
                 logger.info("HALT executed due to error")

@@ -1,16 +1,14 @@
 """
 CPU Simulator
 
-This script initializes and runs a simplified CPU simulation using MIPS-like instructions.
-It loads instructions and memory data from input files, validates them, and executes the program.
+MIPS-inspired CPU simulation. Loads instructions and memory from input files,
+validates them, and executes the program.
 
-Components:
-- CPU: Executes instructions and manages registers
-- MemoryBus: Stores and retrieves data
-- Cache: Optimizes memory access
+Components: CPU (registers, execution), MemoryBus (storage), Cache (optimization).
 
 Usage:
-    python main.py --instructions files/instruction_input.txt --memory files/data_input.txt
+    python main.py --instructions files/instruction_input.txt \\
+        --memory files/data_input.txt
 """
 
 import argparse

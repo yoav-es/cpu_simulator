@@ -35,7 +35,10 @@ class Cache:
         self.blocks = [Block() for _ in range(self.cache_lines)]
         logger.info(f"Cache initialized with {self.cache_lines} lines")
         logger.info(
-            f"Word Size: {self.word_size}, Cache Size: {self.cache_size}, Block Size: {self.block_size}"
+            "Word Size: %s, Cache Size: %s, Block Size: %s",
+            self.word_size,
+            self.cache_size,
+            self.block_size,
         )
 
     def _write_back(self, block: Block, base_address: int, memory: MemoryBus) -> None:
